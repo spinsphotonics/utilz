@@ -1,2 +1,1 @@
-# utilz
-Utilities for differentiable numerical photonics
+# Utilities for Differentiable Numerical Photonics
