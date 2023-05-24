@@ -1,1 +1,1 @@
-# Utilities for Differentiable Numerical Photonics
+# Utilities for differentiable computational photonics
