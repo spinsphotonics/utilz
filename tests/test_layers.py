@@ -175,3 +175,15 @@ def test_corner(thresh, index, expected):
                       jnp.arange(zz)[:, None] + jnp.array([[0.5, 1]]),
                       m=1)
   assert out[index] == pytest.approx(expected)
+
+
+def test_differentiable():
+  xx, yy, zz = 2, 2, 2
+  grad = jax.grad(lambda *args: jnp.sum(layers.render(*args)), (0, 1))
+  layer_grad, pos_grad = grad(jnp.ones((2, 2 * xx, 2 * yy)),
+                              jnp.array([1.0]),
+                              jnp.arange(zz)[:, None] + jnp.array([[-0.5, 0]]),
+                              jnp.arange(zz)[:, None] + jnp.array([[0.5, 1]]),
+                              1)
+  assert layer_grad.shape == (2, 2 * xx, 2 * yy)
+  assert pos_grad.shape == (1,)
