@@ -1,3 +1,10 @@
+"""Compute Yee-cell permittivity values based on layered profiles.
+
+`layer.render()` computes individual permittivity values for a
+finite-difference grid based on the Yee cell in a differentiable way.
+
+"""
+
 import jax.numpy as jnp
 
 
