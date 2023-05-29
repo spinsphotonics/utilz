@@ -1,6 +1,4 @@
-"""Modes
-
-"""
+"""Modes for finite-difference Yee-cell grids."""
 
 import numpy as np
 import scipy.sparse as sp
@@ -59,7 +57,8 @@ def waveguide(i, omega, epsilon, dx, dy):
 
   Returns:
     wavevector: Real-valued scalar.
-    fields: `(2, xx, yy)` Ex and Ey field values of the mode.
+    fields: `(2, xx, yy)` array of real-valued Ex and Ey field values of the
+      mode.
 
   """
   A = _waveguide_operator(omega, epsilon, dx, dy)
@@ -68,6 +67,7 @@ def waveguide(i, omega, epsilon, dx, dy):
     raise ValueError("Expected largest eigenvalue to be negative.")
   w, v = sp.linalg.eigs(A - shift * sp.eye(A.shape[0]), k=i+1, which="LM")
   beta = np.real(np.sqrt(w[i] + shift))
+  mode = np.reshape(np.real(v[:, i]), (2,) + epsilon.shape[1:])
   if beta == 0:
       raise ValueError("No propagating mode found.")
-  return beta, np.reshape(v[:, i], (2,) + epsilon.shape[1:])
+  return np.float32(beta),  np.float32(mode)

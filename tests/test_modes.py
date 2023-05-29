@@ -4,6 +4,16 @@ import numpy as np
 import pytest
 
 
+def test_float32():
+  xx, yy = 30, 20
+  epsilon = np.ones((3, xx, yy))
+  epsilon[:, 9:21, 8:12] = 12.25
+  beta, field = modes.waveguide(0, 2 * np.pi / 37, epsilon,
+                                np.ones((xx, 2)), np.ones((yy, 2)))
+  assert beta.dtype == np.float32
+  assert field.dtype == np.float32
+
+
 @pytest.mark.parametrize("i,expected", [
     (0, 0.36388508),
     (1, 0.18891069),
