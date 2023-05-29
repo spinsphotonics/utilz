@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "src/utilz/utilz_version.py"
+
+[tool.autopep8]
+indent_size = 2
+max_line_length = 80
