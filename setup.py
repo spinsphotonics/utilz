@@ -15,7 +15,7 @@ def read(*parts):
 
 
 setup(
-    name="utilz",
+    name="spins-utilz",
     author="Jesse Lu",
     author_email="jesselu@spinsphotonics.com",
     url="https://github.com/spinsphotonics/utilz",
