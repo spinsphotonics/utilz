@@ -14,7 +14,11 @@ def frequency_component(out, steps, omega, dt):
 
 def source_amplitude(source_waveform, omega, dt):
   """Returns complex scalar denoting source amplitude at `omega`."""
+  # `0.5` offset accounts for the E-field source being colocated in time with
+  # the H-field updates.
   theta = omega * dt * (jnp.arange(source_waveform.shape[0]) - 0.5)
+
+  # Extracts the complex amplitude of the current source at `omega`.
   parts = jnp.mean((2 *
                     jnp.stack([jnp.cos(theta), -jnp.sin(theta)])[..., None] *
                     source_waveform),
