@@ -4,25 +4,41 @@ import numpy as np
 import scipy.sparse as sp
 
 
+def _dx0(dx, dy):
+  xx, yy = dx.shape[0], dy.shape[0]
+  return sp.diags(
+      [np.repeat(u, yy) for u in (dx[:, 0], -dx[1:, 0], -dx[0, 0])],
+      [i * yy for i in (0, -1, xx - 1)])
+
+
+def _dx1(dx, dy):
+  xx, yy = dx.shape[0], dy.shape[0]
+  return sp.diags(
+      [np.repeat(u, yy) for u in (dx[:, 1], -dx[:-1, 1], -dx[-1, 1])],
+      [i * yy for i in (0, 1, -(xx - 1))])
+
+
+def _dy0(dx, dy):
+  xx, yy = dx.shape[0], dy.shape[0]
+  return sp.block_diag(
+      [sp.diags((dy[:, 0], -dy[1:, 0], -dy[0, 0]), (0, -1, yy - 1))] * xx)
+
+
+def _dy1(dx, dy):
+  xx, yy = dx.shape[0], dy.shape[0]
+  return sp.block_diag(
+      [sp.diags((dy[:, 1], -dy[:-1, 1], -dy[-1, 1]), (0, 1, -(yy - 1)))] * xx)
+
+
 def _waveguide_operator(omega, epsilon, dx, dy):
   """Waveguide operator as a sparse scipy matrix."""
   # Note: We assume row-major -- `flatindex = y + yy * x`.
-  _, xx, yy = epsilon.shape
-  dx0 = sp.diags(
-      [np.repeat(u, yy) for u in (dx[:, 0], -dx[1:, 0], -dx[0, 0])],
-      [i * yy for i in (0, -1, xx - 1)])
-  dx1 = sp.diags(
-      [np.repeat(u, yy) for u in (dx[:, 1], -dx[:-1, 1], -dx[-1, 1])],
-      [i * yy for i in (0, 1, -(xx - 1))])
-  dy0 = sp.block_diag(
-      [sp.diags((dy[:, 0], -dy[1:, 0], -dy[0, 0]), (0, -1, yy - 1))] * xx)
-  dy1 = sp.block_diag(
-      [sp.diags((dy[:, 1], -dy[:-1, 1], -dy[-1, 1]), (0, 1, -(yy - 1)))] * xx)
-  exy = sp.diags(epsilon[:2].ravel())
-  inv_ez = sp.diags(1 / epsilon[2].ravel())
+  dx0, dx1, dy0, dy1 = _dx0(dx, dy), _dx1(dx, dy), _dy0(dx, dy), _dy1(dx, dy)
+  exy = sp.diags(np.ravel(epsilon[:2]))
+  inv_ez = sp.diags(1 / np.ravel(epsilon[2]))
   return (omega**2 * exy -
-          sp.vstack([dx0, dy0]) * inv_ez * sp.hstack([dx1, dy1]) * exy -
-          sp.vstack([-dy1, dx1]) * sp.hstack([-dy0, dx0]))
+          sp.vstack([dx0, dy0]) @ inv_ez @ sp.hstack([dx1, dy1]) @ exy -
+          sp.vstack([-dy1, dx1]) @ sp.hstack([-dy0, dx0]))
 
 
 def _find_largest_eigenvalue(A, numsteps):
@@ -32,6 +48,26 @@ def _find_largest_eigenvalue(A, numsteps):
     v = A @ v
     v /= np.linalg.norm(v)
   return v @ A @ v
+
+
+def _curl_operators(beta, omega, epsilon, dx, dy):
+  eye = sp.eye(dx.shape[0] * dy.shape[0])
+  foo = sp.bmat([[0 * eye, -1 * eye], [1 * eye, 0 * eye]])
+  dx0, dx1, dy0, dy1 = _dx0(dx, dy), _dx1(dx, dy), _dy0(dx, dy), _dy1(dx, dy)
+  exy = sp.diags(np.ravel(epsilon[:2]))
+  inv_ez = sp.diags(1 / np.ravel(epsilon[2]))
+  ce = (-sp.vstack([dy0, -dx0]) @ inv_ez @ sp.hstack([dx1, dy1]) @ exy / beta +
+        beta * foo) / omega
+  ch = (-sp.vstack([dy1, -dx1]) @ sp.hstack([dx0, dy0]) / beta -
+        beta * foo) / omega
+  return ce, ch
+
+
+def _power_in_mode(emode, beta, omega, epsilon, dx, dy):
+  curle, curlh = _curl_operators(beta, omega, epsilon, dx, dy)
+  hmode = np.reshape(curle @ np.ravel(emode), emode.shape)
+  return np.sum((dx.T)[(1, 0), :, None] * (dy.T)[:, None, :] *
+                hmode[(1, 0)] * emode)
 
 
 def waveguide(i, omega, epsilon, dx, dy):
@@ -58,7 +94,9 @@ def waveguide(i, omega, epsilon, dx, dy):
   Returns:
     wavevector: Real-valued scalar.
     fields: `(2, xx, yy)` array of real-valued Ex and Ey field values of the
-      mode.
+      mode. Normalized such that the overlap integral with the output field
+      squared is equal to the power in the mode.
+
 
   """
   A = _waveguide_operator(omega, epsilon, dx, dy)
@@ -69,5 +107,7 @@ def waveguide(i, omega, epsilon, dx, dy):
   beta = np.real(np.sqrt(w[i] + shift))
   mode = np.reshape(np.real(v[:, i]), (2,) + epsilon.shape[1:])
   if beta == 0:
-      raise ValueError("No propagating mode found.")
+    raise ValueError("No propagating mode found.")
+  mode /= np.linalg.norm(np.ravel(mode), ord=2)
+  mode /= _power_in_mode(mode, beta, omega, epsilon, dx, dy)
   return np.float32(beta),  np.float32(mode)

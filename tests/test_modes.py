@@ -36,3 +36,18 @@ def test_no_propagating_mode():
   with pytest.raises(ValueError, match="No propagating mode found"):
     beta, field = modes.waveguide(4, 2 * np.pi / 37, epsilon,
                                   np.ones((xx, 2)), np.ones((yy, 2)))
+
+
+@pytest.mark.parametrize("i", [0])
+def test_double_curl(i):
+  xx, yy = 30, 20
+  epsilon = np.ones((3, xx, yy))
+  epsilon[:, 9:21, 8:12] = 12.25
+  omega = 2 * np.pi / 37
+  dx, dy = np.ones((xx, 2)), np.ones((yy, 2))
+  beta, field = modes.waveguide(i, omega, epsilon, dx, dy)
+  ce, ch = modes._curl_operators(beta, omega, epsilon, dx, dy)
+  # NOTE: Maybe just testing that ch @ ce is identity?
+  np.testing.assert_array_almost_equal(
+      np.reshape(ch @ ce @ np.ravel(field), field.shape), field)
+  # np.testing.assert_array_almost_equal((ch @ ce).toarray(), np.eye(2 * xx * yy))
