@@ -24,3 +24,18 @@ def source_amplitude(source_waveform, omega, dt):
                     source_waveform),
                    axis=1)
   return parts[0] + 1j * parts[1]
+
+
+def sampling_interval(wmin, wmax, n, dt):
+  """Sampling interval to observe `n` components within `[wmin, wmax]`."""
+  # First, we find the interval at which the maximum and minimum angular
+  # frequencies generate a phase difference of `pi * n / (n - 1)`.
+  cutoff = np.pi * (n - 1) / n / (wmax - wmin) / dt
+
+  # Now, we use the the periodicity of the center frequency to find the nearest
+  # "open window" (a time step in which no frequency component will complete a
+  # rotation which is a multiple of `pi` -- since this would make this component
+  # unobservable), and use this as our sampling interval.
+  period = 4 * np.pi / (wmax + wmin) / dt
+  m = np.floor((cutoff - period / 4) / (period / 2))
+  return int(round(period / 4 + m * period / 2))
