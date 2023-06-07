@@ -4,12 +4,13 @@ import jax.numpy as jnp
 import numpy as np
 
 
-def frequency_component(out, steps, omega, dt):
+def frequency_components(out, steps, omegas, dt):
   """Returns E-field at `omega` for simulation output `out` at `steps`."""
-  theta = omega * dt * steps
-  phases = np.stack([np.cos(theta), -np.sin(theta)], axis=-1)
-  parts = jnp.einsum('ij,jk...->ik...', np.linalg.pinv(phases), out)
-  return parts[0] + 1j * parts[1]
+  n = len(omegas)
+  theta = omegas[:, None] * dt * steps
+  phases = np.concatenate([np.cos(theta), -np.sin(theta)], axis=0)
+  parts = jnp.einsum('ij,jk...->ik...', np.linalg.pinv(phases.T), out)
+  return parts[:n] + 1j * parts[n:]
 
 
 def source_amplitude(source_waveform, omega, dt):
