@@ -66,6 +66,7 @@ def _conversion_operators(beta, omega, epsilon, dx, dy):
 
 
 def _power_in_mode(emode, beta, omega, epsilon, dx, dy):
+  """Compute poynting vector over `emode`."""
   e2h, _ = _conversion_operators(beta, omega, epsilon, dx, dy)
   hmode = np.reshape(e2h @ np.ravel(emode), emode.shape)
   return np.sum(emode[0] * hmode[1] * (dx[:, 1])[:, None] * dy[:, 0] -
@@ -99,7 +100,6 @@ def waveguide(i, omega, epsilon, dx, dy):
       mode. Normalized such that the overlap integral with the output field
       squared is equal to the power in the mode.
 
-
   """
   A = _waveguide_operator(omega, epsilon, dx, dy)
   shift = _find_largest_eigenvalue(A, 20)
@@ -112,4 +112,4 @@ def waveguide(i, omega, epsilon, dx, dy):
     raise ValueError("No propagating mode found.")
   mode /= np.linalg.norm(np.ravel(mode), ord=2)
   mode /= np.sqrt(_power_in_mode(mode, beta, omega, epsilon, dx, dy))
-  return np.float32(beta),  np.float32(mode)
+  return np.float32(beta), np.float32(mode)
