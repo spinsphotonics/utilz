@@ -37,8 +37,8 @@ def _waveguide_operator(omega, epsilon, dx, dy):
   exy = sp.diags(np.ravel(epsilon[:2]))
   inv_ez = sp.diags(1 / np.ravel(epsilon[2]))
   return (omega**2 * exy -
-          sp.vstack([dx0, dy0]) @ inv_ez @ sp.hstack([dx1, dy1]) @ exy -
-          sp.vstack([-dy1, dx1]) @ sp.hstack([-dy0, dx0]))
+          sp.vstack([dx1, dy1]) @ inv_ez @ sp.hstack([dx0, dy0]) @ exy -
+          sp.vstack([-dy0, dx0]) @ sp.hstack([-dy1, dx1]))
 
 
 def _find_largest_eigenvalue(A, numsteps):
@@ -50,24 +50,26 @@ def _find_largest_eigenvalue(A, numsteps):
   return v @ A @ v
 
 
-def _curl_operators(beta, omega, epsilon, dx, dy):
-  eye = sp.eye(dx.shape[0] * dy.shape[0])
-  foo = sp.bmat([[0 * eye, -1 * eye], [1 * eye, 0 * eye]])
+def _conversion_operators(beta, omega, epsilon, dx, dy):
+  """Operators for converting `[Ex, Ey]` to `[Hx, Hy]` and back."""
   dx0, dx1, dy0, dy1 = _dx0(dx, dy), _dx1(dx, dy), _dy0(dx, dy), _dy1(dx, dy)
   exy = sp.diags(np.ravel(epsilon[:2]))
+  inv_exy = sp.diags(1 / np.ravel(epsilon[:2]))
   inv_ez = sp.diags(1 / np.ravel(epsilon[2]))
-  ce = (-sp.vstack([dy0, -dx0]) @ inv_ez @ sp.hstack([dx1, dy1]) @ exy / beta +
-        beta * foo) / omega
-  ch = (-sp.vstack([dy1, -dx1]) @ sp.hstack([dx0, dy0]) / beta -
-        beta * foo) / omega
-  return ce, ch
+  eye = sp.eye(dx.shape[0] * dy.shape[0])
+  foo = sp.bmat([[0 * eye, 1 * eye], [-1 * eye, 0 * eye]])
+  e2h = -(sp.vstack([dy1, -dx1]) @ inv_ez @ sp.hstack([dx0, dy0]) @ exy / beta +
+          beta * foo) / omega
+  h2e = inv_exy @ (sp.vstack([dy0, -dx0]) @ sp.hstack([dx1, dy1]) / beta +
+                   beta * foo) / omega
+  return e2h, h2e
 
 
 def _power_in_mode(emode, beta, omega, epsilon, dx, dy):
-  curle, curlh = _curl_operators(beta, omega, epsilon, dx, dy)
-  hmode = np.reshape(curle @ np.ravel(emode), emode.shape)
-  return np.sum((dx.T)[(1, 0), :, None] * (dy.T)[:, None, :] *
-                hmode[(1, 0)] * emode)
+  e2h, _ = _conversion_operators(beta, omega, epsilon, dx, dy)
+  hmode = np.reshape(e2h @ np.ravel(emode), emode.shape)
+  return np.sum(emode[0] * hmode[1] * (dx[:, 1])[:, None] * dy[:, 0] -
+                emode[1] * hmode[0] * (dx[:, 0])[:, None] * dy[:, 1])
 
 
 def waveguide(i, omega, epsilon, dx, dy):
@@ -109,5 +111,5 @@ def waveguide(i, omega, epsilon, dx, dy):
   if beta == 0:
     raise ValueError("No propagating mode found.")
   mode /= np.linalg.norm(np.ravel(mode), ord=2)
-  mode /= _power_in_mode(mode, beta, omega, epsilon, dx, dy)
+  mode /= np.sqrt(_power_in_mode(mode, beta, omega, epsilon, dx, dy))
   return np.float32(beta),  np.float32(mode)
