@@ -8,8 +8,8 @@ def frequency_components(out, steps, omegas, dt):
   """Returns E-field at `omega` for simulation output `out` at `steps`."""
   n = len(omegas)
   theta = omegas[:, None] * dt * steps
-  phases = np.concatenate([np.cos(theta), -np.sin(theta)], axis=0)
-  parts = jnp.einsum('ij,jk...->ik...', np.linalg.pinv(phases.T), out)
+  phases = jnp.concatenate([jnp.cos(theta), -jnp.sin(theta)], axis=0)
+  parts = jnp.einsum('ij,jk...->ik...', jnp.linalg.pinv(phases.T), out)
   return parts[:n] + 1j * parts[n:]
 
 
