@@ -11,9 +11,9 @@ import jax.numpy as jnp
 def _render_single(layers, layer_pos, grid_start, grid_end, m, axis):
   # In-plane offsets.
   if axis != "x":
-    layers = jnp.roll(layers, m, 1)
+    layers = jnp.pad(layers[:, :-m, :], ((0, 0), (m, 0), (0, 0)), "edge")
   if axis != "y":
-    layers = jnp.roll(layers, m, 2)
+    layers = jnp.pad(layers[:, :, :-m], ((0, 0), (0, 0), (m, 0)), "edge")
 
   # Offsets along z-axis.
   if axis == "z":
